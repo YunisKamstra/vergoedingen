@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Dagloon Calculator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 2rem;
+      background-color: #f0f2f5;
+    }
+
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .container {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 2rem;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      min-width: 280px;
+      flex: 1;
+      max-width: 500px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: #555;
+      font-weight: bold;
+    }
+
+    input[type="number"],
+    input[type="time"],
+    select {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+      font-weight: normal;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 0.8rem;
+      transform: scale(1.2);
+    }
+
+    button {
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 0.8rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      display: block;
+      margin: 2rem auto 0 auto;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #result {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 1.4rem;
+      color: #28a745;
+      font-weight: bold;
+    }
+
+    .tab {
+      margin-top: 3rem;
+      padding: 2rem;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      max-width: 1000px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .tab h3 {
+      margin-bottom: 1rem;
+      text-align: center;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Dagloon Berekenen</h1>
+
+  <div class="container">
+    <!-- Linkerkolom -->
+    <div class="card">
+      <label>Uurloon (€):
+        <input type="number" id="uurloon" step="0.01" min="0" oninput="setCookie('uurloon', this.value, 365)">
+      </label>
+
+      <label>Begintijd:
+        <input type="time" id="begintijd">
+      </label>
+
+      <label>Eindtijd:
+        <input type="time" id="eindtijd">
+      </label>
+
+      <label>Dag van de week:
+        <select id="dagVanDeWeek">
+          <option value="">-- Kies de dag --</option>
+          <option value="maandag">Maandag</option>
+          <option value="dinsdag">Dinsdag</option>
+          <option value="woensdag">Woensdag</option>
+          <option value="donderdag">Donderdag</option>
+          <option value="vrijdag">Vrijdag</option>
+          <option value="zaterdag">Zaterdag</option>
+          <option value="zondag">Zondag</option>
+        </select>
+      </label>
+    </div>
+
+    <!-- Rechterkolom -->
+    <div class="card">
+      <h3>Extra vergoedingen</h3>
+      <div class="checkbox-group">
+        <label><input type="checkbox" id="vergIntrVTAanspraak"> Verg.intr.VT-aanspraak (€96,80)</label>
+        <label><input type="checkbox" id="hogeOproep"> Hoge oproep (€21,16)</label>
+        <label><input type="checkbox" id="lageOproep"> Lage oproep (€10,58)</label>
+        <label><input type="checkbox" id="roodWeekend"> Rood weekend (10 × uurloon)</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Extra tab -->
+  <div class="tab">
+    <h3>Extra vergoedingen NS Internationaal</h3>
+    <div class="checkbox-group">
+      <label><input type="checkbox" id="overnachtingsvergoeding"> Overnachtingsvergoeding buitenland (€79,69)</label>
+      <label><input type="checkbox" id="maaltijdvergoedingDag"> Maaltijdvergoeding buitenland dag (€11,29)</label>
+      <label><input type="checkbox" id="maaltijdvergoedingAvond"> Maaltijdvergoeding buitenland avond (€24,26)</label>
+      <label>Int/Flex vergoeding NSI (max 4x):
+        <input type="number" id="flexVergoedingAantal" min="0" max="4" value="0">
+      </label>
+    </div>
+  </div>
+
+  <button onclick="berekenLoon()">Bereken totaal</button>
+
+  <div id="result"></div>
+
+  <script>
+    // Functie om de cookie in te stellen
+    function setCookie(cname, cvalue, exdays) {
+      const d = new Date();
+      d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
+      let expires = "expires=" + d.toUTCString();
+      document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+    }
+
+    // Functie om de cookie op te halen
+    function getCookie(cname) {
+      let name = cname + "=";
+      let decodedCookie = decodeURIComponent(document.cookie);
+      let ca = decodedCookie.split(';');
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') {
+          c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+          return c.substring(name.length, c.length);
+        }
+      }
+      return "";
+    }
+
+    // Laad het uurloon uit de cookie bij het laden van de pagina
+    window.onload = function() {
+      const opgeslagenUurloon = getCookie("uurloon");
+      if (opgeslagenUurloon) {
+        document.getElementById("uurloon").value = opgeslagenUurloon;
+      }
+    };
+
+    function berekenLoon() {
+      const uurloon = parseFloat(document.getElementById("uurloon").value) || 0;
+      const begintijd = document.getElementById("begintijd").value;
+      const eindtijd = document.getElementById("eindtijd").value;
+      const dagVanDeWeek = document.getElementById("dagVanDeWeek").value;
+
+      // Basis extra vergoedingen
+      const vergoedingVT = document.getElementById("vergIntrVTAanspraak").checked ? 96.80 : 0;
+      const hogeOproep = document.getElementById("hogeOproep").checked ? 21.16 : 0;
+      const lageOproep = document.getElementById("lageOproep").checked ? 10.58 : 0;
+      const roodWeekend = document.getElementById("roodWeekend").checked ? (uurloon * 10) : 0;
+
+      // Nieuwe vergoedingen NS Internationaal
+      const overnachtingsvergoeding = document.getElementById("overnachtingsvergoeding").checked ? 79.69 : 0;
+      const maaltijdDag = document.getElementById("maaltijdvergoedingDag").checked ? 11.29 : 0;
+      const maaltijdAvond = document.getElementById("maaltijdvergoedingAvond").checked ? 24.26 : 0;
+      const flexAantal = parseInt(document.getElementById("flexVergoedingAantal").value) || 0;
+      const flexVergoeding = Math.min(flexAantal, 4) * 13.32;
+
+      const extraVergoedingen = vergoedingVT + hogeOproep + lageOproep + roodWeekend + overnachtingsvergoeding + maaltijdDag + maaltijdAvond + flexVergoeding;
+
+      if (!begintijd || !eindtijd) {
+        document.getElementById("result").textContent = "Vul zowel begin- als eindtijd in.";
+        return;
+      }
+
+      const [beginUur, beginMinuut] = begintijd.split(":").map(Number);
+      const [eindUur, eindMinuut] = eindtijd.split(":").map(Number);
+
+      const begin = new Date(0, 0, 0, beginUur, beginMinuut);
+      const eind = new Date(0, 0, 0, eindUur, eindMinuut);
+
+      if (eind <= begin) {
+        document.getElementById("result").textContent = "Eindtijd moet later zijn dan begintijd.";
+        return;
+      }
+
+      const verschilMs = eind - begin;
+      const verschilMinuten = Math.floor(verschilMs / 60000);
+      const uren = Math.floor(verschilMinuten / 60);
+      const minuten = verschilMinuten % 60;
+
+      const totaalUren = verschilMinuten / 60;
+      let verdiensten = totaalUren * uurloon + extraVergoedingen;
+
+      // Tijd- en daggebonden vergoedingen
+      verdiensten += berekenTijdVergoedingen(beginUur, beginMinuut, eindUur, eindMinuut, dagVanDeWeek, totaalUren);
+
+      document.getElementById("result").textContent =
+        `Je hebt op ${dagVanDeWeek} ${uren} uur en ${minuten} minuten gewerkt en verdient totaal €${verdiensten.toFixed(2)}.`; 
+    }
+
+    function berekenTijdVergoedingen(beginUur, beginMinuut, eindUur, eindMinuut, dagVanDeWeek, totaalUren) {
+      let extraVergoeding = 0;
+
+      // Tijdsblokken per dag
+      const tijdsblokken = [
+        { dag: ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'], start: 0, eind: 6, vergoeding: 11.28 },
+        { dag: ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'], start: 6, eind: 7, vergoeding: 9.35 },
+        { dag: ['maandag'], start: 7, eind: 7.5, vergoeding: 9.35 },
+        { dag: ['dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'], start: 7, eind: 7.5, vergoeding: 4.64 },
+        { dag: ['zaterdag'], start: 7.5, eind: 18, vergoeding: 9.35 },
+        { dag: ['maandag', 'dinsdag', 'woensdag', 'donderdag'], start: 18, eind: 23, vergoeding: 4.64 },
+        { dag: ['vrijdag', 'zaterdag'], start: 18, eind: 23, vergoeding: 9.35 },
+        { dag: ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'], start: 23, eind: 24, vergoeding: 11.28 }
+      ];
+
+      tijdsblokken.forEach(block => {
+        if (block.dag.includes(dagVanDeWeek)) {
+          if ((beginUur >= block.start && beginUur < block.eind) || (eindUur >= block.start && eindUur < block.eind)) {
+            extraVergoeding += totaalUren * block.vergoeding;
+          }
+        }
+      });
+
+      return extraVergoeding;
+    }
+  </script>
+
+</body>
+</html>
